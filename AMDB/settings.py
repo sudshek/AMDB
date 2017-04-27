@@ -24,14 +24,14 @@ SECRET_KEY = 'e14j2&rx1p+qu$so0x$ke@1a0c=ih!#iy!43j&4=17h8$d1&d6'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
 ALLOWED_HOSTS = []
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'Users'
+    'Users',
+    'rest_framework',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -77,10 +77,10 @@ WSGI_APPLICATION = 'AMDB.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'AMDB',
+        'NAME': 'amdb',
         'USER': 'root',
         'PASSWORD': 'birgunj69',
-        'HOSTS': '127.0.0.1',
+        'HOST': '127.0.0.1',
         'PORT': '3306'
 
     }

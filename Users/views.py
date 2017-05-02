@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-
+from Users.views import Review
 from Users.serializers import MovieSerializer
+from Users.serializers import ReviewSerializer
 from Users.models import user
+from django.db.models import Avg
 from django.http import HttpResponse
+from django.utils.datetime_safe import datetime, date
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from Users.serializers import UserSerializer
@@ -19,7 +22,7 @@ def create_user(request):
     username = request.data['username']
     password = request.data['password']
     short_bio = request.data['short_bio']
-    print name,username,password,short_bio
+
     if name is None or len(name)==0:
         return Response ({"error_message": "Name field cannot be empty"}, status=400)
 
@@ -84,31 +87,84 @@ def login_user(request):
 
 @api_view(['POST'])
 def create_movie(request):
-    global movie_id, movie_id
+
     current_user = check_token(request)
     user_id = current_user
     if current_user is not None:
-        name = request.data['name']
-        duration_in_minutes = request.data['duration_in_minutes']
-        release_date = request.data['release_date']
-        poster_picture_url = request.data['poster_picture_url']
-        overall_rating = request.data['overall_rating']
-        censor_board_rating = request.data['censor_board_rating']
-        genre_name = request.data['genre_name']
-        genres = []
 
+        if 'name' in request.data:
+            name = request.data['name']
+            does_movie_exist = Movie.objects.filter(name=name).first()
+            if does_movie_exist is not None:
+                return Response({"error_message":"This movie exists already!!"})
+
+        else:
+            return Response({'error_message ': 'Movie name not provided '}, status=200)
+
+
+        if 'duration_in_minutes' in request.data:
+            duration_in_minutes = request.data['duration_in_minutes']
+        else:
+            return Response({'error_message': 'Movie Duration not provided '}, status=200)
+
+
+        if 'release_date' in request.data:
+            release_date = request.data['release_date']
+        else:
+            return Response({'error_message ': 'Release Date not provided '}, status=200)
+
+
+        if 'poster_picture_url' in request.data:
+            poster_picture_url = request.data['poster_picture_url']
+        else:
+            return Response({'error_message ': 'Poster picture url not provided '}, status=200)
+
+
+        if 'overall_rating' in request.data:
+            overall_rating = request.data['overall_rating']
+        else:
+            return Response({'error_message ': 'Overall rating not provided '}, status=200)
+
+
+
+        if 'censor_board_rating' in request.data:
+            censor_board_rating = request.data['censor_board_rating']
+        else:
+            return Response({'error_message ': 'Censor Board Rating not provided '}, status=200)
+
+
+        if 'genre_name' in request.data:
+            genre_name = request.data['genre_name']
+        else:
+            return Response({'error_message ': 'Genre name not provided '}, status=200)
+
+        if len(name)==0:
+            return Response({"error_message":"Name cannot be empty"})
+
+
+        if censor_board_rating>5:
+            return Response ({"error_message":"You are supposed to rate movie between 1 to 5"})
+
+
+        if overall_rating>5:
+            return Response ({"error_message":"You are supposed to rate movie between 1 to 5"})
+
+        new_movie = Movie.objects.create(name=name, release_date=release_date, duration_in_minutes=duration_in_minutes,
+                                         poster_picture_url=poster_picture_url, overall_rating=overall_rating,
+                                         censor_board_rating=censor_board_rating, user_id=user_id)
+        new_movie.save()
 
         for name in genre_name:
-            genre_exists = Genre.objects.filter(name=genre_name).first()
-            genres.append(genre_exists)
-            movie_id = Movie.id
-            genre_id = Genre.id
+           does_genre_exists = Genre.objects.filter(name=name).first()
+           if does_genre_exists is not None:
+               new_genre = MovieGenre.objects.create(genre_id=does_genre_exists,movie_id=new_movie)
+
+               new_genre.save()
+           else:
+                return Response({"error_message":"Genre does not exist"},status=200)
 
 
-            new_genre = MovieGenre.objects.create(genre=genre_id,movie=movie_id)
-        new_movie = Movie.objects.create(name=name, release_date=release_date, duration_in_minutes=duration_in_minutes , poster_picture_url=poster_picture_url,overall_rating=overall_rating,censor_board_rating=censor_board_rating,user_id=user_id)
-        new_movie.save()
-        return Response(MovieSerializer(instance=new_movie).data,{"genre":genre_id,"movie":movie_id},status=200,)
+        return Response(MovieSerializer(instance=new_movie).data,status=200,)
     else:
         return Response("You are not authorized to perform this action!")
 
@@ -119,11 +175,67 @@ def create_movie(request):
 def review_movie(request):
     current_user = check_token(request)
     if current_user is not None:
-       pass
 
-    else:
+        if 'name' in request.data:
+            name = request.data['name']
+        else:
+            return Response({"error_message":"Movie Name not provided"},status=200)
+
+        if 'user' in request.data:
+            user = request.data['user']
+        else:
+            return Response({"error_message": "User name not provided"}, status=200)
+
+        if 'rating' in request.data:
+            rating= request.data['rating']
+        else:
+            return Response({"error_message": "Rating not provided"}, status=200)
+
+        if 'review' in request.data:
+            review = request.data['review']
+        else:
+            return Response({"error_message": "Review not provided"}, status=200)
+
+        if len(name) == 0:
+            return Response({"error_message":"Please enter a name"},status=200)
+
+
+        movie_exists = Movie.objects.filter(name=name).first()
+
+        if movie_exists:
+
+            does_rating_exist = Review.objects.filter(movie=movie_exists,user = current_user)
+
+            if  does_rating_exist:
+                return Response({"error_message":"You have already rated this movie!!"})
+
+            elif float(rating) > 5.0:
+                return Response({"error_message":"You have to rate movie between zero to 5"})
+
+            elif len(review) == 0:
+                return Response({"error-message":"You haven't written the review!"})
+
+            else :
+                new_review = Review.objects.create(movie=movie_exists,user=current_user,rating=rating,review=review)
+                new_review.save()
+                average_rating = Review.objects.filter(movie=movie_exists).aggregate(avg_rating=Avg('rating'))
+
+                movie_rating = Movie.objects.filter(id=movie_exists.id).first()
+                movie_rating.overall_rating = average_rating['avg_rating']
+                movie_rating.save()
+                return Response(ReviewSerializer(instance=new_review).data, status=200)
+        else:
+            return Response({"error_message":"No such movie exists, Create movie!"})
+
+
+
+
+
+    else :
         return Response("You are not authorized to perform this action!")
 
+@api_view(['GET'])
+def get_movie(request):
 
 
 

@@ -19,6 +19,7 @@ from django.contrib import admin
 from Users.views import create_user
 from Users.views import login_user
 from Users.views import create_movie
+from Users.views import review_movie
 
 
 urlpatterns = [
@@ -26,6 +27,7 @@ urlpatterns = [
     url(r'user/',get_user),
     url(r'^create/users/',create_user),
     url(r'^login/',login_user),
-    url(r'^movie/create/',create_movie)
+    url(r'^movie/create/',create_movie),
+    url(r^'movie/review/',review_movie)
 
 ]
